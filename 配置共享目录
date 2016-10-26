@@ -1,0 +1,38 @@
+因为Red5配置好后，里面的demo只能播放本地目录视频
+因此把Web服务器上传文件夹视频目录共享到 Red5服务器相应目录下
+
+两台机器（可以是虚拟机）：
+192.168.32.86--->a机器
+192.168.32.68----->b机器
+共享a机器的 /www/elearning/public/upload目录到b机器的/usr/local/red5/webapps/oflaDemo/streams/upload
+注意：b机器创建相应目录
+
+1、检查系统是否开启nfs服务：service nfs status 结果显示nfs: unrecognized service，说明系统没有安装nfs服务,so 安装之；
+注意，yum install nfs是无法安装的，应该用yum install nfs-utils
+2、开启portmap服务，还是unrecognized service ，安装之，yum install portmap 未果，百度+google之，发现centos 6.4中portmap 已经被rpcbind取代，于是乎继续安装之，未果，检查下是不是已经在安装nfs-utils包的时候安装了，service rpcbind status ,果然已经一块安装了。
+以上为整个安装过程，总结下就是centos 6.x之后的系统一个命令yum install nfs-utils 全部搞定，貌似5.x版本的也可以用这个命令搞定，搞不定的话可以单独装portmap；主要6.x版本用的事rpcbind, 5.x版本用的是portmap。
+
+
+下面是启动过程：
+1、首先配置/etc/exports文件
+  vi /etc/exports
+然后输入 /www/elearning/public/upload 192.168.32.*(rw,sync,no_root_squash,no_all_squash)
+保存退出
+2、启动rpcbind服务 
+  service rpcbind start
+3、启动nfs服务 
+  service nfs start
+  showmount -e 192.168.32.86 输出以下结果：
+  Export list for 192.168.32.86:
+  /www/elearning/public/upload 192.168.32.*
+说明成功启动（注意：在centos 6.x之后的版本showmount -e 后面一定要指定ip，否则会卡在那，也没输出，5.x的版本可以不指定）
+ 
+下面是挂载nfs到指定机器的目录 
+ssh登陆到另一台机器b：ssh root@192.168.32.68 输入密码123456
+  mount -t nfs 192.168.32.86:/www/elearning/public/upload /usr/local/red5/webapps/oflaDemo/streams/upload
+在a机器上建立文件test.txt,然后发现b机器有了同样的文件，nfs服务端和客户端正常同步。
+如果没有把数据同步过来，把/usr/local/red5/webapps/oflaDemo/streams/upload文件夹
+  chmod -R 777 streams
+
+备注：如果挂载错误可以用一下语句 umount -f 取消挂载的目录
+  umount -f /usr/local/red5/webapps/oflaDemo/streams/
