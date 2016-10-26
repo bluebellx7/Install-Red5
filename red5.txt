@@ -1,0 +1,97 @@
+#!/bin/bash
+#For RedHat and cousins:
+# chkconfig: 2345 85 85
+# description: Red5 flash streaming server
+# processname: red5
+# Created By: Yulijia (yu_lijia@163.com)
+
+
+PROG=red5
+
+RED5_HOME=/usr/local/red5
+
+TOSTART=$RED5_HOME/$PROG.sh
+
+TOSTOP=$RED5_HOME/red5-shutdown.sh
+
+PIDFILE=/var/run/$PROG.pid
+
+JAVA_HOME=/usr/lib/jvm-exports/java-1.7.0-openjdk-1.7.0.111.x86_64
+ 
+# Source function library
+
+. /etc/rc.d/init.d/functions 
+
+[ -r /etc/sysconfig/red5 ] && . /etc/sysconfig/red5
+
+RETVAL=0
+
+export JAVA_HOME=$JAVA_HOME
+
+case "$1" in
+   start)
+   echo -n $"Starting $PROG: "
+   cd $RED5_HOME
+   $TOSTART >/dev/null 2>/dev/null &
+   RETVAL=$?
+   if [ $RETVAL -eq 0 ]; then
+      echo $! > $PIDFILE
+      touch /var/lock/subsys/$PROG
+   fi
+   [ $RETVAL -eq 0 ] && success $"$PROG startup" || failure $"$PROG startup"
+
+   echo
+
+   ;;
+
+   stop)
+
+   echo -n $"Shutting down $PROG: " 
+
+   cd $RED5_HOME
+
+   #$TOSTOP >/dev/null 2>/dev/null &  
+
+   killproc -p $PIDFILE
+
+   RETVAL=$?
+
+   if [ $RETVAL -eq 0 ]; then
+
+      rm -f /var/lock/subsys/$PROG
+
+   fi
+
+   [ $RETVAL -eq 0 ] && success $"$PROG stop" || failure $"$PROG stop"
+
+   echo
+
+   ;;
+
+   restart)
+
+   $0 stop
+
+   $0 start
+
+   ;;
+
+   status)
+
+   status $PROG -p $PIDFILE
+
+   RETVAL=$?
+
+   ;;
+
+   *)
+
+   echo $"Usage: $0 {start|stop|restart|status}"
+
+   RETVAL=1
+
+esac
+
+ 
+
+exit $RETVAL
